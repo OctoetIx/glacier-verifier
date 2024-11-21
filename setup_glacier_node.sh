@@ -3,8 +3,6 @@
 # Update system packages
 sudo apt update && sudo apt upgrade -y
 
-echo "==== Welcome to the Glacier Verifier Node Setup Script ===="
-
 # Check if Docker is installed
 echo "Checking if Docker is installed..."
 if ! command -v docker &> /dev/null; then
