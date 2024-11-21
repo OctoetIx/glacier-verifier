@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Update system packages
+echo "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
-fi
 
 # Check if Docker is installed
 echo "Checking if Docker is installed..."
@@ -25,7 +25,6 @@ else
     echo "Docker Compose is already installed."
 fi
 
-
 # Check if Screen is installed
 echo "Checking if Screen is installed..."
 if ! command -v screen &> /dev/null; then
@@ -34,14 +33,16 @@ if ! command -v screen &> /dev/null; then
 else
     echo "Screen is already installed."
 fi
-#Create Screen
-echo "Creating Screen "
-screen -S glacier
+
+# Create Screen session
+echo "Creating Screen session..."
+screen -S glacier -dm bash
 
 # Create the Glacier directory
 mkdir -p ~/glacier
 
 # Download verifier
+echo "Downloading the verifier..."
 wget https://github.com/Glacier-Labs/node-bootstrap/releases/download/v0.0.1-beta/verifier_linux_amd64 -O ~/glacier/verifier_linux_amd64
 
 # Request Private Key input
@@ -59,23 +60,23 @@ TEE:
   IpfsURL: "https://greenfield.onebitdev.com/ipfs/"
 EOF
 
-# Change the permissions of the verifier file so that it can be executed
+# Change permissions of the verifier file
 chmod +x ~/glacier/verifier_linux_amd64
 
-# Create a directory for configuration in /etc
+# Create configuration directory and set permissions
 sudo mkdir -p /etc/glaciernetwork
-
-# Copy the configuration file to the right location
 sudo cp ~/glacier/config.yaml /etc/glaciernetwork/config
+sudo chmod 644 /etc/glaciernetwork/config
 
-# Create a systemd configuration file
+# Create a systemd service file
+echo "Creating systemd service file..."
 cat << EOF | sudo tee /etc/systemd/system/glacier.service
-[Units]
+[Unit]
 Description=Glacier Node Service
-After=network. target
+After=network.target
 
 [Service]
-ExecStart=/root/glacier/verifier_linux_amd64
+ExecStart=$(realpath ~/glacier/verifier_linux_amd64)
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal
@@ -84,10 +85,11 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd and enable services
+# Reload systemd and start the service
+echo "Setting up Glacier as a systemd service..."
 sudo systemctl daemon-reload
 sudo systemctl enable glacier.service
 sudo systemctl start glacier.service
 
-echo "Your node is ready to run as a systemd service!"
-echo "You can monitor the logs with the command: journalctl -u glacier.service -f"
+echo "Your Glacier node is ready to run as a systemd service!"
+echo "Monitor logs using: journalctl -u glacier.service -f"
