@@ -2,6 +2,7 @@
 
 # Update system packages
 sudo apt update && sudo apt upgrade -y
+fi
 
 # Check if Docker is installed
 echo "Checking if Docker is installed..."
