@@ -37,27 +37,56 @@ fi
 echo "Creating Screen "
 screen -S glacier
 
-# Prompt for Private Key
-echo "Please enter your private key for the Glacier Verifier Node:"
-read -s PRIVATE_KEY
+# Create the Glacier directory
+mkdir -p ~/glacier
 
-# Validate Private Key
-if [ -z "$PRIVATE_KEY" ]; then
-    echo "Private key is required to proceed. Exiting."
-    exit 1
-fi
+# Download verifier
+wget https://github.com/Glacier-Labs/node-bootstrap/releases/download/v0.0.1-beta/verifier_linux_amd64 -O ~/glacier/verifier_linux_amd64
 
-# Pull and Run Glacier Verifier Node
-echo "Pulling and running Glacier Verifier Node Docker container..."
-docker pull docker.io/glaciernetwork/glacier-verifier:v0.0.1
-docker run -d -e PRIVATE_KEY=$PRIVATE_KEY --name glacier-verifier docker.io/glaciernetwork/glacier-verifier:v0.0.1
+# Request Private Key input
+read -p "Enter your Private Key: " private_key
 
-# Check if the container is running
-if docker ps | grep -q "glacier-verifier"; then
-    echo "Glacier Verifier Node is running successfully!"
-    echo "Use 'docker logs -f glacier-verifier' to monitor the node logs."
-else
-    echo "Failed to start the Glacier Verifier Node. Check the Docker logs for details."
-fi
+# Create a config.yaml file
+cat << EOF > ~/glacier/config.yaml
+Http:
+  Listen: "127.0.0.1:10801"
+Network: "testnet"
+RemoteBootstrap: "https://glacier-labs.github.io/node-bootstrap/"
+Keystore:
+  PrivateKey: "$private_key"
+TEE:
+  IpfsURL: "https://greenfield.onebitdev.com/ipfs/"
+EOF
 
-echo "==== Setup Complete ===="
+# Change the permissions of the verifier file so that it can be executed
+chmod +x ~/glacier/verifier_linux_amd64
+
+# Create a directory for configuration in /etc
+sudo mkdir -p /etc/glaciernetwork
+
+# Copy the configuration file to the right location
+sudo cp ~/glacier/config.yaml /etc/glaciernetwork/config
+
+# Create a systemd configuration file
+cat << EOF | sudo tee /etc/systemd/system/glacier.service
+[Units]
+Description=Glacier Node Service
+After=network. target
+
+[Service]
+ExecStart=/root/glacier/verifier_linux_amd64
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd and enable services
+sudo systemctl daemon-reload
+sudo systemctl enable glacier.service
+sudo systemctl start glacier.service
+
+echo "Your node is ready to run as a systemd service!"
+echo "You can monitor the logs with the command: journalctl -u glacier.service -f"
