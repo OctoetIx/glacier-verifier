@@ -22,7 +22,7 @@ Fast CPU with 2+ cores
 # Installation
 - For Unix:
 ```bash
-wget -O setup_glacier_node.sh https://github.com/OctoetIx/glacier_verifier/blob/main/setup_glacier_node.sh && chmod +x glacier.sh && ./glacier.sh
+wget -O setup_glacier_node.sh https://github.com/OctoetIx/glacier-verifier/blob/main/setup_glacier_node.sh && chmod +x setup_glacier_node.sh  && ./setup_glacier_node.sh 
 ```
 
 - You can just run this script at your own risk, I'm not responsible for any loss or damage caused by this bot. This bot is for educational purposes only.
