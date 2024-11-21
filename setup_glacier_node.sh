@@ -1,3 +1,8 @@
+#!/bin/bash
+
+# Glacier Verifier Node Setup Script with ASCII Art Header
+
+# Install figlet if not installed
 if ! command -v figlet > /dev/null 2>&1; then
     echo "Installing figlet for ASCII art..."
     sudo apt update && sudo apt install -y figlet
@@ -7,41 +12,26 @@ fi
 figlet "FLIADEX"
 echo "==== Welcome to the Glacier Verifier Node Setup Script ===="
 
-# Update system packages
+# Update and install necessary packages
+echo "Updating system and installing prerequisites..."
 sudo apt update && sudo apt upgrade -y
+sudo apt install -y ca-certificates curl gnupg lsb-release wget
 
-# Check if Screen is installed
-echo "Checking if Screen is installed..."
-if ! command -v screen &> /dev/null; then
-    echo "Screen is not installed. Installing Screen..."
-    sudo apt install screen -y
-else
-    echo "Screen is already installed."
+# Install Docker
+echo "Installing Docker..."
+sudo mkdir -m 0755 -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo \
+"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update && sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Verify Docker installation
+if ! docker --version > /dev/null 2>&1; then
+    echo "Docker installation failed. Exiting."
+    exit 1
 fi
-
-# Check if Docker is installed
-echo "Checking if Docker is installed..."
-if ! command -v docker &> /dev/null; then
-    echo "Docker is not installed. Installing Docker..."
-    sudo apt install -y docker.io
-    sudo systemctl start docker
-    sudo systemctl enable docker
-else
-    echo "Docker is already installed."
-fi
-docker --version
-
-# Check if Docker Compose is installed
-echo "Checking if Docker Compose is installed..."
-if ! command -v docker-compose &> /dev/null; then
-    echo "Docker Compose is not installed. Installing Docker Compose..."
-    sudo apt install -y docker-compose
-else
-    echo "Docker Compose is already installed."
-fi
-
-echo "Creating screen..."
-screen -S glacier
+echo "Docker installed successfully!"
 
 # Prompt for Private Key
 echo "Please enter your private key for the Glacier Verifier Node:"
