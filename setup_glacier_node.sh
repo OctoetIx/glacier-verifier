@@ -1,8 +1,23 @@
-#!/bin/bash
+if ! command -v figlet > /dev/null 2>&1; then
+    echo "Installing figlet for ASCII art..."
+    sudo apt update && sudo apt install -y figlet
+fi
+
+# Print ASCII art for "FLIADEX"
+figlet "FLIADEX"
+echo "==== Welcome to the Glacier Verifier Node Setup Script ===="
 
 # Update system packages
-echo "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
+
+# Check if Screen is installed
+echo "Checking if Screen is installed..."
+if ! command -v screen &> /dev/null; then
+    echo "Screen is not installed. Installing Screen..."
+    sudo apt install screen -y
+else
+    echo "Screen is already installed."
+fi
 
 # Check if Docker is installed
 echo "Checking if Docker is installed..."
@@ -25,71 +40,30 @@ else
     echo "Docker Compose is already installed."
 fi
 
-# Check if Screen is installed
-echo "Checking if Screen is installed..."
-if ! command -v screen &> /dev/null; then
-    echo "Screen is not installed. Installing Screen..."
-    sudo apt install screen -y
-else
-    echo "Screen is already installed."
+echo "Creating screen..."
+screen -S glacier
+
+# Prompt for Private Key
+echo "Please enter your private key for the Glacier Verifier Node:"
+read -s PRIVATE_KEY
+
+# Validate Private Key
+if [ -z "$PRIVATE_KEY" ]; then
+    echo "Private key is required to proceed. Exiting."
+    exit 1
 fi
 
-# Create Screen session
-echo "Creating Screen session..."
-screen -S glacier -dm bash
+# Pull and Run Glacier Verifier Node
+echo "Pulling and running Glacier Verifier Node Docker container..."
+docker pull docker.io/glaciernetwork/glacier-verifier:v0.0.1
+docker run -d -e PRIVATE_KEY=$PRIVATE_KEY --name glacier-verifier docker.io/glaciernetwork/glacier-verifier:v0.0.1
 
-# Create the Glacier directory
-mkdir -p ~/glacier
+# Check if the container is running
+if docker ps | grep -q "glacier-verifier"; then
+    echo "Glacier Verifier Node is running successfully!"
+    echo "Use 'docker logs -f glacier-verifier' to monitor the node logs."
+else
+    echo "Failed to start the Glacier Verifier Node. Check the Docker logs for details."
+fi
 
-# Download verifier
-echo "Downloading the verifier..."
-wget https://github.com/Glacier-Labs/node-bootstrap/releases/download/v0.0.1-beta/verifier_linux_amd64 -O ~/glacier/verifier_linux_amd64
-
-# Request Private Key input
-read -p "Enter your Private Key: " private_key
-
-# Create a config.yaml file
-cat << EOF > ~/glacier/config.yaml
-Http:
-  Listen: "127.0.0.1:10801"
-Network: "testnet"
-RemoteBootstrap: "https://glacier-labs.github.io/node-bootstrap/"
-Keystore:
-  PrivateKey: "$private_key"
-TEE:
-  IpfsURL: "https://greenfield.onebitdev.com/ipfs/"
-EOF
-
-# Change permissions of the verifier file
-chmod +x ~/glacier/verifier_linux_amd64
-
-# Create configuration directory and set permissions
-sudo mkdir -p /etc/glaciernetwork
-sudo cp ~/glacier/config.yaml /etc/glaciernetwork/config
-sudo chmod 644 /etc/glaciernetwork/config
-
-# Create a systemd service file
-echo "Creating systemd service file..."
-cat << EOF | sudo tee /etc/systemd/system/glacier.service
-[Unit]
-Description=Glacier Node Service
-After=network.target
-
-[Service]
-ExecStart=$(realpath ~/glacier/verifier_linux_amd64)
-Restart=on-failure
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Reload systemd and start the service
-echo "Setting up Glacier as a systemd service..."
-sudo systemctl daemon-reload
-sudo systemctl enable glacier.service
-sudo systemctl start glacier.service
-
-echo "Your Glacier node is ready to run as a systemd service!"
-echo "Monitor logs using: journalctl -u glacier.service -f"
+echo "==== Setup Complete ===="
