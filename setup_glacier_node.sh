@@ -4,11 +4,6 @@
 sudo apt update && sudo apt upgrade -y
 
 echo "==== Welcome to the Glacier Verifier Node Setup Script ===="
-fi
-# Update and install necessary packages
-echo "Updating system and installing prerequisites..."
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y ca-certificates curl gnupg lsb-release wget
 
 # Check if Docker is installed
 echo "Checking if Docker is installed..."
